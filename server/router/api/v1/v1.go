@@ -75,8 +75,18 @@ func (s *APIV1Service) RegisterGateway(ctx context.Context, echoServer *echo.Ech
 	if err != nil {
 		return err
 	}
-
-	gwMux := runtime.NewServeMux()
+	var opts []runtime.ServeMuxOption
+	if v := s.Profile.ProxyAuthHeader; v != "" {
+		opts = append(opts, runtime.WithIncomingHeaderMatcher(func(key string) (string, bool) {
+			switch key {
+			case v:
+				return key, true
+			default:
+				return runtime.DefaultHeaderMatcher(key)
+			}
+		}))
+	}
+	gwMux := runtime.NewServeMux(opts...)
 	if err := v1pb.RegisterWorkspaceServiceHandler(ctx, gwMux, conn); err != nil {
 		return err
 	}

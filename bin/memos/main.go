@@ -36,14 +36,15 @@ var (
 		Short: `An open source, lightweight note-taking service. Easily capture and share your great thoughts.`,
 		Run: func(_ *cobra.Command, _ []string) {
 			instanceProfile := &profile.Profile{
-				Mode:        viper.GetString("mode"),
-				Addr:        viper.GetString("addr"),
-				Port:        viper.GetInt("port"),
-				Data:        viper.GetString("data"),
-				Driver:      viper.GetString("driver"),
-				DSN:         viper.GetString("dsn"),
-				InstanceURL: viper.GetString("instance-url"),
-				Version:     version.GetCurrentVersion(viper.GetString("mode")),
+				Mode:            viper.GetString("mode"),
+				Addr:            viper.GetString("addr"),
+				Port:            viper.GetInt("port"),
+				Data:            viper.GetString("data"),
+				Driver:          viper.GetString("driver"),
+				DSN:             viper.GetString("dsn"),
+				InstanceURL:     viper.GetString("instance-url"),
+				ProxyAuthHeader: http.CanonicalHeaderKey(viper.GetString("proxy-auth-header")),
+				Version:         version.GetCurrentVersion(viper.GetString("mode")),
 			}
 			if err := instanceProfile.Validate(); err != nil {
 				panic(err)
@@ -110,6 +111,7 @@ func init() {
 	rootCmd.PersistentFlags().String("driver", "sqlite", "database driver")
 	rootCmd.PersistentFlags().String("dsn", "", "database source name(aka. DSN)")
 	rootCmd.PersistentFlags().String("instance-url", "", "the url of your memos instance")
+	rootCmd.PersistentFlags().String("proxy-auth-header", "", "name of proxy auth header")
 
 	if err := viper.BindPFlag("mode", rootCmd.PersistentFlags().Lookup("mode")); err != nil {
 		panic(err)
@@ -130,6 +132,9 @@ func init() {
 		panic(err)
 	}
 	if err := viper.BindPFlag("instance-url", rootCmd.PersistentFlags().Lookup("instance-url")); err != nil {
+		panic(err)
+	}
+	if err := viper.BindPFlag("proxy-auth-header", rootCmd.PersistentFlags().Lookup("proxy-auth-header")); err != nil {
 		panic(err)
 	}
 
@@ -153,8 +158,9 @@ addr: %s
 port: %d
 mode: %s
 driver: %s
+proxyAuthHeader: %s
 ---
-`, profile.Version, profile.Data, profile.Addr, profile.Port, profile.Mode, profile.Driver)
+`, profile.Version, profile.Data, profile.Addr, profile.Port, profile.Mode, profile.Driver, profile.ProxyAuthHeader)
 
 	print(greetingBanner)
 	if len(profile.Addr) == 0 {

@@ -30,6 +30,8 @@ type Profile struct {
 	Version string
 	// InstanceURL is the url of your memos instance.
 	InstanceURL string
+	// ProxyAuthHeader is the header containing the username.
+	ProxyAuthHeader string
 }
 
 func (p *Profile) IsDev() bool {

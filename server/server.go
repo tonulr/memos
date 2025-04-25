@@ -79,7 +79,7 @@ func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store
 		grpc.ChainUnaryInterceptor(
 			apiv1.NewLoggerInterceptor().LoggerInterceptor,
 			grpcrecovery.UnaryServerInterceptor(),
-			apiv1.NewGRPCAuthInterceptor(store, secret).AuthenticationInterceptor,
+			apiv1.NewGRPCAuthInterceptor(store, secret, profile.ProxyAuthHeader).AuthenticationInterceptor,
 		))
 	s.grpcServer = grpcServer
 

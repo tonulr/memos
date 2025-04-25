@@ -29,15 +29,17 @@ const (
 
 // GRPCAuthInterceptor is the auth interceptor for gRPC server.
 type GRPCAuthInterceptor struct {
-	Store  *store.Store
-	secret string
+	Store           *store.Store
+	secret          string
+	proxyAuthHeader string
 }
 
 // NewGRPCAuthInterceptor returns a new API auth interceptor.
-func NewGRPCAuthInterceptor(store *store.Store, secret string) *GRPCAuthInterceptor {
+func NewGRPCAuthInterceptor(store *store.Store, secret string, proxyAuthHeader string) *GRPCAuthInterceptor {
 	return &GRPCAuthInterceptor{
-		Store:  store,
-		secret: secret,
+		Store:           store,
+		secret:          secret,
+		proxyAuthHeader: proxyAuthHeader,
 	}
 }
 
@@ -47,17 +49,26 @@ func (in *GRPCAuthInterceptor) AuthenticationInterceptor(ctx context.Context, re
 	if !ok {
 		return nil, status.Errorf(codes.Unauthenticated, "failed to parse metadata from incoming context")
 	}
-	accessToken, err := getTokenFromMetadata(md)
-	if err != nil {
-		return nil, status.Errorf(codes.Unauthenticated, "failed to get access token: %v", err)
-	}
-
-	username, err := in.authenticate(ctx, accessToken)
-	if err != nil {
-		if isUnauthorizeAllowedMethod(serverInfo.FullMethod) {
-			return handler(ctx, request)
+	var username string
+	if in.proxyAuthHeader != "" {
+		if v := md.Get(in.proxyAuthHeader); len(v) > 0 {
+			username = v[0]
 		}
-		return nil, err
+	}
+	var accessToken string
+	if username == "" {
+		var err error
+		accessToken, err = getTokenFromMetadata(md)
+		if err != nil {
+			return nil, status.Errorf(codes.Unauthenticated, "failed to get access token: %v", err)
+		}
+		username, err = in.authenticate(ctx, accessToken)
+		if err != nil {
+			if isUnauthorizeAllowedMethod(serverInfo.FullMethod) {
+				return handler(ctx, request)
+			}
+			return nil, err
+		}
 	}
 	user, err := in.Store.GetUser(ctx, &store.FindUser{
 		Username: &username,
